@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Simulacija interference</title>
+
+	<style>
+		body{
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+		}
+
+		canvas{
+		}
+	</style>
+</head>
+<body>
+	<script>
+		class Simulacija{
+			constructor(){
+				this.c = document.createElement("canvas");
+				this.ctx = this.c.getContext("2d");
+
+				document.body.appendChild(this.c);
+
+				this.izviri = [new Izvir(30,200), new Izvir(100,50)];
+
+				this.tocke = [];
+
+				this.t = 0;
+
+				for(let x=0; x<100; x++){
+					for(let y=0; y<100; y++){
+						this.tocke.push(new Tocka(x*5,y*5));
+					}
+				}
+
+				window.onresize = ()=>{this.resize();};
+				window.onmousedown = (e)=>{this.mousedown(e);};
+				window.onmousemove = (e)=>{this.mousemove(e);};
+				window.onmouseup = (e)=>{this.mouseup(e);};
+				this.resize();
+
+				this.tick();
+			}
+
+			dodajIzvir(x,y){
+				this.izviri.push(new Izvir(x,y));
+			}
+
+			tick(t){
+				this.t = t;
+				this.render();
+				window.requestAnimationFrame((t)=>{this.tick(t)});
+			}
+
+			render(){
+
+				this.ctx.clearRect(0, 0, this.c.width, this.c.height);
+
+				for(let i=0; i<this.tocke.length; i++){
+					this.tocke[i].izracunaj(this.izviri, this.t);
+					this.tocke[i].render(this.ctx);
+				}
+				for(let i=0; i<this.izviri.length; i++){
+					let izvir = this.izviri[i];
+					izvir.render(this.ctx);
+				}
+			}
+
+			resize(){
+				this.c.width = window.innerWidth;
+				this.c.height = window.innerHeight;
+			}
+
+			mousedown(e){
+				for(let i=0; i<this.izviri.length; i++){
+					let izvir = this.izviri[i];
+					if(izvir.mouseCollision(e.clientX, e.clientY)){
+						console.log(izvir);
+						izvir.grab();
+						break;
+					}
+				}
+			}
+
+			mousemove(e){
+				for(let i=0; i<this.izviri.length; i++){
+					let izvir = this.izviri[i];
+					if(izvir.grabed)izvir.move(e.clientX, e.clientY);
+				}
+			}
+
+			mouseup(e){
+				for(let i=0; i<this.izviri.length; i++){
+					let izvir = this.izviri[i];
+					izvir.release();
+				}
+			}
+		}
+
+		class Izvir{
+			constructor(x,y){
+				this.x = x;
+				this.y = y;
+				this.r = 20;
+
+				this.grabed = false;
+			}
+
+			render(ctx){
+				ctx.fillStyle = "rgba(255,255,255)";
+				ctx.beginPath();
+				ctx.arc(this.x,this.y,this.r,0,2*Math.PI);
+				ctx.fill();
+				ctx.stroke()
+			}
+
+			mouseCollision(x,y){
+				let d2 = (this.x-x)**2 + (this.y-y)**2;
+				if(d2 < this.r**2) return true;
+				else return false;
+			}
+
+			move(x,y){
+				this.x = x;
+				this.y = y;
+			}
+
+			grab(){
+				this.grabed = true;
+			}
+
+			release(){
+				this.grabed = false;
+			}
+		}
+
+		class Tocka{
+			constructor(x,y){
+				this.x = x;
+				this.y = y;
+				this.d = 0;
+				this.s = 0;
+			}
+
+			izracunaj(izviri, t){
+				this.s = 0;
+				for(let i=0; i<izviri.length; i++){
+					this.d = Math.sqrt((this.x-izviri[i].x)**2 + (this.y-izviri[i].y)**2);
+					this.s += Math.cos(this.d/10 - t/500);
+				}
+
+				this.s = this.s*255/izviri.length
+			}
+
+			render(ctx){
+				let r = Math.max(0, -this.s);
+				let b = Math.max(0, this.s);
+				ctx.fillStyle = "rgba("+r+",0,"+b+")";
+				ctx.fillRect(this.x, this.y, 10, 10);
+			}
+		}
+
+		const sim = new Simulacija();
+	</script>
+</body>
+</html>
